@@ -1,0 +1,72 @@
+@base = http://127.0.0.1:8080
+@tenant1 = tenant1.localhost
+@tenant2 = tenant2.localhost
+
+### 1. Who am I? (tenant1)
+GET {{base}}/api/me
+Host: {{tenant1}}
+
+### 1. Who am I? (tenant2)
+GET {{base}}/api/me
+Host: {{tenant2}}
+
+### 2. tenant1 sees only its own expenses
+# @name tenant1List
+GET {{base}}/api/expenses
+Host: {{tenant1}}
+
+> {% client.global.set("tenant1ExpenseId", response.body[0].id); %}
+
+### 2. tenant2 sees only its own expenses
+GET {{base}}/api/expenses
+Host: {{tenant2}}
+
+### 3. Totals are per company (tenant1)
+GET {{base}}/api/expenses/total
+Host: {{tenant1}}
+
+### 3. Totals are per company (tenant2)
+GET {{base}}/api/expenses/total
+Host: {{tenant2}}
+
+### 4. tenant1 adds an expense. No tenant in the body, Hibernate stamps it.
+POST {{base}}/api/expenses
+Host: {{tenant1}}
+Content-Type: application/json
+
+{
+  "description": "Printer",
+  "amount": 400,
+  "spentOn": "2026-09-21"
+}
+
+### 4. tenant2 still sees only its own rows
+GET {{base}}/api/expenses
+Host: {{tenant2}}
+
+### 5. tenant1 opens its own expense by id -> 200
+GET {{base}}/api/expenses/{{tenant1ExpenseId}}
+Host: {{tenant1}}
+
+### 5. tenant2 opens tenant1's expense by id -> 404
+GET {{base}}/api/expenses/{{tenant1ExpenseId}}
+Host: {{tenant2}}
+
+### 6. Raw SQL with no WHERE clause, Postgres RLS still filters (tenant1)
+GET {{base}}/api/debug/leak-test
+Host: {{tenant1}}
+
+### 6. Same raw SQL as tenant2
+GET {{base}}/api/debug/leak-test
+Host: {{tenant2}}
+
+### 7. No tenant subdomain -> 404 before any business code runs
+GET {{base}}/api/expenses
+Host: localhost
+
+### 7. Unknown tenant -> 404
+GET {{base}}/api/expenses
+Host: nobody.localhost
+
+### Health check (no tenant needed, outside /api)
+GET {{base}}/actuator/health

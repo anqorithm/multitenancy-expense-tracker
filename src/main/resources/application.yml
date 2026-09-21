@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: multitenancy
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:127.0.0.1}:5432/multitenancy
+    username: app
+    password: app
+
+  jpa:
+    open-in-view: false
+    show-sql: true
+    hibernate:
+      ddl-auto: none
+
+  flyway:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+logging:
+  level:
+    org.hibernate.orm.jdbc.bind: trace
